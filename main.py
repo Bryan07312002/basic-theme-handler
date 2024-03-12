@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import List
+from typing import List, Any, TypeAlias
 from dataclasses import dataclass
 from pathlib import Path
 import json
@@ -13,8 +13,8 @@ class ConfigFile:
 
 @dataclass
 class AppConf:
-    app_cfg_path: Path
-    app_theme_cfg: Path
+    real_cfg_path: Path
+    theme_cfg: Path
 
 
 @dataclass
@@ -23,19 +23,17 @@ class Theme:
     apps_cfg: dict[str, AppConf]
 
 
-def read_json_file(path: Path) -> dict:
-    with path.open() as file:
-        return json.load(file)
+Json: TypeAlias = str | int | float | list["Json"] | dict[str, "Json"]
 
 
-def build_themes_from_json(themes_json: dict) -> List[Theme]:
+def build_themes_from_json(themes_json: list[Json]) -> List[Theme]:
     themes_list = []
     for theme_json in themes_json:
         apps_cfg = {}
-        for app_name, app_conf_json in theme_json["apps_cfg"].items():
+        for app_name, app_conf_json in theme_json.get("apps_cfg").items():
             app_conf = AppConf(
-                app_cfg_path=Path(app_conf_json["app_cfg_path"]),
-                app_theme_cfg=Path(app_conf_json["app_theme_cfg"]),
+                app_cfg_path=Path(app_conf_json.get("real_cfg_path")),
+                app_theme_cfg=Path(app_conf_json.get("theme_cfg")),
             )
             apps_cfg[app_name] = app_conf
 
@@ -49,9 +47,16 @@ def read_themes_file(path: Path | str) -> List[Theme]:
     if isinstance(path, str):
         path = Path(path)
 
-    themes_json = read_json_file(path)
-    return build_themes_from_json(themes_json)
+    with path.open() as file:
+        themes_json = json.load(file)
+        return build_themes_from_json(themes_json)
+
+
+def set_theme(theme: Theme):
+    for app_cfg in theme.apps_cfg.values():
+        app_cfg.theme_cfg.symlink_to(app_cfg.real_cfg_path)
 
 
 if __name__ == "__main__":
-    print(read_themes_file("./config.json"))
+    cfg = read_themes_file("./config.json")
+    set_theme(cfg[0])
