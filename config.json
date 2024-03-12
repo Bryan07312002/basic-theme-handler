@@ -3,7 +3,7 @@
     "name": "tokyo",
     "apps_cfg": {
       "kitty": {
-        "real_cfg_path": "./teste/kitty/theme.cfg",
+        "real_cfg_path": "./cfg/kitty/theme.cfg",
         "theme_cfg": "./themes/kitty/theme.cfg"
       }
     }

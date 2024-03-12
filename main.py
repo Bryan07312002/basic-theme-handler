@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import List, Any, TypeAlias
 from dataclasses import dataclass
 from pathlib import Path
+import os
 import json
 
 
@@ -26,19 +27,25 @@ class Theme:
 Json: TypeAlias = str | int | float | list["Json"] | dict[str, "Json"]
 
 
-def build_themes_from_json(themes_json: list[Json]) -> List[Theme]:
+def build_themes_from_json(themes_json: Json) -> List[Theme]:
     themes_list = []
-    for theme_json in themes_json:
-        apps_cfg = {}
-        for app_name, app_conf_json in theme_json.get("apps_cfg").items():
-            app_conf = AppConf(
-                app_cfg_path=Path(app_conf_json.get("real_cfg_path")),
-                app_theme_cfg=Path(app_conf_json.get("theme_cfg")),
-            )
-            apps_cfg[app_name] = app_conf
+    if not isinstance(themes_json, int) and not isinstance(themes_json, float):
+        for theme_json in themes_json:
+            app_cfg_list = {}
+            apps_cfg = theme_json.get("apps_cfg")  # type: ignore
 
-        theme = Theme(name=theme_json["name"], apps_cfg=apps_cfg)
-        themes_list.append(theme)
+            if apps_cfg is None:
+                raise Exception("cant decode config file")
+
+            for app_name, app_conf_json in apps_cfg.items():  # type: ignore
+                app_conf = AppConf(
+                    real_cfg_path=Path(app_conf_json.get("real_cfg_path")),  # type: ignore
+                    theme_cfg=Path(app_conf_json.get("theme_cfg")),  # type: ignore
+                )
+                app_cfg_list[app_name] = app_conf
+
+            theme = Theme(name=theme_json["name"], apps_cfg=app_cfg_list)  # type: ignore
+            themes_list.append(theme)
 
     return themes_list
 
@@ -54,7 +61,10 @@ def read_themes_file(path: Path | str) -> List[Theme]:
 
 def set_theme(theme: Theme):
     for app_cfg in theme.apps_cfg.values():
-        app_cfg.theme_cfg.symlink_to(app_cfg.real_cfg_path)
+        if app_cfg.real_cfg_path.exists():
+            os.remove(app_cfg.real_cfg_path)
+
+        app_cfg.real_cfg_path.hardlink_to(app_cfg.theme_cfg)
 
 
 if __name__ == "__main__":
