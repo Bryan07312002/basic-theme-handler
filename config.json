@@ -1,0 +1,11 @@
+[
+  {
+    "name": "tokyo",
+    "apps_cfg": {
+      "kitty": {
+        "app_cfg_path": "",
+        "app_theme_cfg": ""
+      }
+    }
+  }
+]
